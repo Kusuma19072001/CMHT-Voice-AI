@@ -21,6 +21,22 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
   audioLevel,
   onToggleListening
 }) => {
+  // Handler to call Flask backend for email alert
+  const handleEmailAlert = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:5000/alert', {
+        method: 'POST',
+      });
+      if (response.ok) {
+        alert('Alert email sent!');
+      } else {
+        alert('Failed to send alert.');
+      }
+    } catch (error) {
+      alert('Error sending alert: ' + error);
+    }
+  };
+
   return (
     <motion.div
       className="flex flex-col items-center justify-center gap-8"
@@ -32,7 +48,7 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
       <motion.img
         src={untLogo}
         alt="UNT Logo"
-        className="w-48"
+        className="w-[600px]"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -83,6 +99,14 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
           isListening={isListening} 
           message={statusMessage} 
         />
+
+        {/* Email Alert Button - moved below mic and status */}
+        <button
+          className="mt-4 px-6 py-2 bg-green-700 text-white text-lg font-semibold rounded-xl shadow-lg hover:bg-green-800 transition-all duration-200"
+          onClick={handleEmailAlert}
+        >
+          Need a laptop? Click here
+        </button>
       </div>
     </motion.div>
   );

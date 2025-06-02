@@ -12,12 +12,12 @@ interface UseVoiceAssistantReturn {
 export const useVoiceAssistant = (): UseVoiceAssistantReturn => {
   const [isListening, setIsListening] = useState(false);
   const [status, setStatus] = useState<Status>('idle');
-  const [statusMessage, setStatusMessage] = useState('Click the microphone to start');
+  const [statusMessage, setStatusMessage] = useState('Looking for a room or professor? Just ask me!');
 
   useEffect(() => {
     if (!isListening) {
       setStatus('idle');
-      setStatusMessage('Click the microphone to start');
+      setStatusMessage('Looking for a room or professor? Just ask me!');
       return;
     }
 
