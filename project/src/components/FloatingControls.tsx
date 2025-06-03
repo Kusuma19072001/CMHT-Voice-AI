@@ -1,5 +1,4 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useRef, useEffect } from 'react';
 import MicButton from './MicButton';
 import StatusText from './StatusText';
 import VoiceVisualizer from './VoiceVisualizer';
@@ -21,78 +20,90 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
   audioLevel,
   onToggleListening
 }) => {
-  // Handler to call Flask backend for email alert
-  const handleEmailAlert = async () => {
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [notification, setNotification] = useState<string | null>(null);
+  const [followup, setFollowup] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleEmailAlert = async (type: string) => {
     try {
       const response = await fetch('http://127.0.0.1:5000/alert', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }),
       });
       if (response.ok) {
-        alert('Alert email sent!');
+        setNotification(`Alert for "${type}" sent!`);
       } else {
-        alert('Failed to send alert.');
+        setNotification('Failed to send alert.');
       }
     } catch (error) {
-      alert('Error sending alert: ' + error);
+      setNotification('Error sending alert: ' + error);
     }
+    setShowDropdown(false);
   };
 
+  // Hide notification after 2 seconds, then show followup
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+        setFollowup(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
+  // Hide followup after 2 seconds
+  useEffect(() => {
+    if (followup) {
+      const timer = setTimeout(() => setFollowup(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [followup]);
+
+  // Close dropdown if clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    }
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDropdown]);
+
   return (
-    <motion.div
-      className="flex flex-col items-center justify-center gap-8"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
+    <div className="flex flex-col items-center justify-center gap-8 min-h-screen pb-16">
       {/* UNT Logo */}
-      <motion.img
+      <img
         src={untLogo}
         alt="UNT Logo"
         className="w-[600px]"
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
       />
 
       <div className="flex flex-col items-center gap-6">
         {/* Visualizer only shows when listening */}
         {isListening && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3 }}
-          >
+          <div>
             <VoiceVisualizer isListening={isListening} audioLevel={audioLevel} />
-          </motion.div>
+          </div>
         )}
         
         {/* Mic button with container */}
-        <motion.div
-          className="relative"
-          whileHover={{ scale: 1.05 }}
-          transition={{ duration: 0.2 }}
-        >
-          {/* Glowing background effect */}
-          {isListening && (
-            <motion.div
-              className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-500/50 to-pink-500/50 blur-lg"
-              animate={{
-                scale: [1, 1.2, 1],
-                opacity: [0.5, 0.8, 0.5],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                repeatType: "reverse",
-              }}
-            />
-          )}
-          
+        <div className="relative">
           <MicButton 
             isListening={isListening} 
             onClick={onToggleListening} 
           />
-        </motion.div>
+        </div>
         
         {/* Status text */}
         <StatusText 
@@ -100,15 +111,59 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
           message={statusMessage} 
         />
 
-        {/* Email Alert Button - moved below mic and status */}
-        <button
-          className="mt-4 px-6 py-2 bg-green-700 text-white text-lg font-semibold rounded-xl shadow-lg hover:bg-green-800 transition-all duration-200"
-          onClick={handleEmailAlert}
-        >
-          Need a laptop? Click here
-        </button>
+        {/* Laptop Services Dropdown Button */}
+        <div className="relative mt-4" ref={dropdownRef}>
+          <button
+            className="px-6 py-2 bg-green-700 text-white text-lg font-semibold rounded-xl shadow-lg hover:bg-green-800 transition-all duration-200"
+            onClick={() => setShowDropdown((prev) => !prev)}
+          >
+            Laptop Services &nbsp;▾
+          </button>
+          {showDropdown && (
+            <div className="absolute left-0 right-0 mt-2 bg-white rounded-xl shadow-lg z-10">
+              <button
+                className="block w-full text-left px-6 py-2 hover:bg-green-100 text-green-900"
+                onClick={() => handleEmailAlert('laptop return')}
+              >
+                Laptop Return
+              </button>
+              <button
+                className="block w-full text-left px-6 py-2 hover:bg-green-100 text-green-900"
+                onClick={() => handleEmailAlert('laptop checkout')}
+              >
+                Laptop Checkout
+              </button>
+              <button
+                className="block w-full text-left px-6 py-2 hover:bg-green-100 text-green-900"
+                onClick={() => handleEmailAlert('other queries')}
+              >
+                Other Queries
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-    </motion.div>
+
+      {/* Notification Toasts */}
+      {notification && (
+        <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-green-700 text-white px-6 py-3 rounded-xl shadow-lg z-50">
+          {notification}
+        </div>
+      )}
+      {followup && (
+        <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-blue-700 text-white px-6 py-3 rounded-xl shadow-lg z-50">
+          Our Help Desk member will be there in a few minutes!
+        </div>
+      )}
+
+      {/* Footer */}
+      <footer
+        className="fixed bottom-2 left-0 w-full text-center text-gray-400 select-none z-50"
+        style={{ fontSize: '0.65rem' }}
+      >
+        © 2025 CMHT IT HELP DESK SERVICES
+      </footer>
+    </div>
   );
 };
 
