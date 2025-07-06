@@ -152,7 +152,7 @@ const FloatingControls: React.FC<FloatingControlsProps> = ({
       )}
       {followup && (
         <div className="fixed bottom-10 left-1/2 transform -translate-x-1/2 bg-blue-700 text-white px-6 py-3 rounded-xl shadow-lg z-50">
-          Our Help Desk member will be there in a few minutes!
+          Our Help Desk member will be there in few minutes!
         </div>
       )}
 
